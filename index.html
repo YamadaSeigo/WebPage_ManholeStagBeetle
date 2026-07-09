@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Unity WebGL | ManholeStagBeetle</title>
     <style>
-      /* 画面全体を黒背景にし、コンテンツを中央に寄せる */
       body {
         background-color: #222222;
         margin: 0;
@@ -14,27 +14,35 @@
         justify-content: center;
         align-items: center;
         height: 100vh;
+        height: 100dvh; /* スマホのURLバーを考慮した高さ */
         overflow: hidden;
       }
 
-      /* 表示領域をスマホサイズ（9:16）に固定するCSS */
+      /* ▼ 基本設定（スマホ用）：画面いっぱいに広げる ▼ */
       #unity-container {
-        width: 100vw;
-        max-width: 450px; /* PCで見たときの横幅の上限 */
-        aspect-ratio: 9 / 16; /* 縦横比を9:16に固定 */
-        position: relative;
+        width: 100%;
+        height: 100%;
         background-color: #000000;
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); /* 見栄えを良くする影 */
+        position: relative;
       }
 
-      /* Unityのキャンバスをコンテナの大きさに100%追従させる */
+      /* ▼ PC・タブレット用：画面の高さに合わせて9:16に固定する ▼ */
+      @media screen and (min-width: 600px) {
+        #unity-container {
+          height: 95vh; /* 画面の高さの95%を基準にする */
+          width: calc(95vh * 9 / 16); /* 高さを基準に横幅を計算 */
+          box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+          border-radius: 12px; /* スマホっぽく角を少し丸める */
+          overflow: hidden;
+        }
+      }
+
       #unity-canvas {
         width: 100% !important;
         height: 100% !important;
         display: block;
       }
 
-      /* シンプルな読み込み中テキストの配置 */
       #unity-loading-bar {
         position: absolute;
         left: 50%;
@@ -55,11 +63,11 @@
     </div>
     <script>
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/Build_WebGL.loader.js";
+      var loaderUrl = buildUrl + "/WebPage_ManholeStagBeetle.loader.js";
       var config = {
-        dataUrl: buildUrl + "/Build_WebGL.data.unityweb",
-        frameworkUrl: buildUrl + "/Build_WebGL.framework.js.unityweb",
-        codeUrl: buildUrl + "/Build_WebGL.wasm.unityweb",
+        dataUrl: buildUrl + "/WebPage_ManholeStagBeetle.data.unityweb",
+        frameworkUrl: buildUrl + "/WebPage_ManholeStagBeetle.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebPage_ManholeStagBeetle.wasm.unityweb",
         streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "ManholeStagBeetle",
@@ -71,11 +79,11 @@
 
       var script = document.createElement("script");
       script.src = loaderUrl;
+      // Unityが生成する特殊なマクロを使用してロードを実行
       script.onload = () => {
         createUnityInstance(canvas, config, (progress) => {
-          // 読み込み進捗があればここに処理を書けます
         }).then((unityInstance) => {
-          loadingBar.style.display = "none"; // ロード完了でテキストを消す
+          loadingBar.style.display = "none";
         }).catch((message) => {
           alert(message);
         });
