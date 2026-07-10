@@ -1,6 +1,7 @@
 import os
 import requests # 追加: HTTP通信用ライブラリ
 import uuid # 追加: 複数同時アクセス用にランダムなファイル名を作るため
+import json # ▼ 追加: 文字列のJSONを本物のJSONオブジェクトに変換するため
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -36,7 +37,7 @@ def scan_image():
     try:
         print(f"スキャンツールへリクエスト送信中... パス: {save_path}")
         
-        # requestsを使って、curl -d "path=画像パス" と全く同じ通信を行います
+         # requestsを使って、curl -d "path=画像パス" と全く同じ通信を行います
         # proxyの設定をバイパスするために proxies={'http': None, 'https': None} を指定します
         response = requests.post(
             SCANNER_API_URL, 
@@ -45,14 +46,25 @@ def scan_image():
         )
 
         # 4. スキャンツールからの返答を受け取る
-        scan_result_text = response.text
-        print(f"スキャン結果受信: {scan_result_text}")
+        print(f"スキャン結果受信(生データ): {response.text}")
+
+        # ▼ 変更：スキャンツールからの返答（エスケープされた文字列）の皮を剥がして本物のJSONにする
+        try:
+            # json.loads()を使って、文字列("{\"is_success\"...}")を辞書オブジェクトに変換します
+            scan_result_data = json.loads(response.text)
+            
+            # 念のため、皮を剥がしてもまだ文字列だった場合（二重で文字列化されていた場合）にも対応
+            if isinstance(scan_result_data, str):
+                scan_result_data = json.loads(scan_result_data)
+        except:
+            # 万が一スキャンツールがJSON以外を返してきた場合のフェイルセーフ
+            scan_result_data = {"is_success": "NO", "error_info": response.text}
 
         # Unityへスキャン結果をそのまま返す
         return jsonify({
             'status': 'success',
             'message': 'スキャン完了',
-            'scan_result': scan_result_text
+            'scan_result': scan_result_data  # ▼ 変更: scan_result_text から scan_result_data に修正
         })
 
     except requests.exceptions.RequestException as e:
