@@ -1,5 +1,6 @@
 import os
 import requests # 追加: HTTP通信用ライブラリ
+import uuid # 追加: 複数同時アクセス用にランダムなファイル名を作るため
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -22,12 +23,14 @@ def scan_image():
     if file.filename == '':
         return jsonify({'error': 'ファイル名が空です'}), 400
 
-    # 2. 画像をローカルフォルダに保存し、絶対パスを取得する
-    # スキャンツールが確実にファイルを見つけられるよう、フルパス（C:/...）に変換します
-    save_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, file.filename))
+    # 【変更】複数アプリからの同時アクセスでファイルが上書きされないよう、
+    # uuidを使って「絶対に被らないランダムなファイル名」を生成します。
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    save_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, unique_filename))
+    
     file.save(save_path)
     
-    print(f"画像を保存しました: {save_path}")
+    print(f"画像を一時保存しました: {save_path}")
 
     # 3. 保存したパスを使って、スキャンツール(9800番)へPOSTリクエストを送信 (curlコマンドの代わり)
     try:
@@ -57,6 +60,14 @@ def scan_image():
         print(f"スキャンツールとの通信エラー: {e}")
         return jsonify({'error': 'スキャンツールへの接続に失敗しました。ツールが起動しているか確認してください。'}), 500
 
+    finally:
+        # 【追加】成功・失敗に関わらず、最後に必ず実行される処理
+        # スキャンが終わった画像を削除して、PCの容量を圧迫しないようにします
+        if os.path.exists(save_path):
+            os.remove(save_path)
+            print(f"不要になった一時ファイルを削除しました: {save_path}")
+
 if __name__ == '__main__':
-    # ⚠️ 重要: 既存ツールが9800を使っているので、こちらは5000番で起動します
-    app.run(host='127.0.0.1', port=5050, debug=True)
+    # ⚠️ 5000番は他のアプリと衝突しやすいため、安全な5050番に変更しています
+    # 外部(ngrok)から確実につながるように host を '0.0.0.0' にしています
+    app.run(host='0.0.0.0', port=5050, debug=True)
